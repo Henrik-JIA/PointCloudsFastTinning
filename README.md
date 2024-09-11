@@ -24,8 +24,8 @@ This project implements a fast point cloud thinning algorithm based on sample po
 1. Clone this repository to your local machine:
 
    ```sh
-   git clone https://github.com/yourusername/point-cloud-thinning.git
-   cd point-cloud-thinning
+   git clone https://github.com/Henrik-JIA/PointCloudsFastTinning.git
+   cd PointCloudsFastTinning
    ```
 
 2. Install the required Python libraries:
@@ -39,7 +39,7 @@ This project implements a fast point cloud thinning algorithm based on sample po
 1. Run the main program:
 
    ```sh
-   python compress_point/main.py
+   python main.py
    ```
 
 2. In the GUI, you can:
