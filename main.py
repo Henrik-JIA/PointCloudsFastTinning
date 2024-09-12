@@ -62,28 +62,87 @@ def render_point_cloud(points, colors):
     draw_axes()
 
 # ImGui 界面
-def imgui_interface(is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback):
+def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback):
     imgui.new_frame()
-    imgui.begin("Point Cloud Controls")
-    imgui.text("Adjust point cloud settings:")
 
-    _, is_thinning_enabled = imgui.checkbox("Enable Thinning", is_thinning_enabled)
+    # 初始化变量
+    changed_ds = changed_dh = changed_lod = False
+    is_hovered = False  # 新增变量，指示鼠标是否悬停在 ImGui 窗口上
     
-    changed_ds, ds = imgui.slider_float("Distance Threshold (ds)", ds, 0.1, 100.0)
-    changed_dh, dh = imgui.slider_float("Height Threshold (dh)", dh, 0.1, 100.0)
-    changed_lod, lod_level = imgui.slider_float("LOD Level", lod_level, 0.001, 1.0)
-    
-    if imgui.button("Load PLY File"):
-        load_ply_callback()
-    
-    if imgui.button("Save Simplified Point Cloud"):
-        if is_thinning_enabled:
-            simplify_callback(lod_level)
+    # 菜单栏
+    if imgui.begin_main_menu_bar():
+        if imgui.begin_menu("Window", True):
+            clicked, show_point_clouds_tinning_control = imgui.menu_item("Show Point Cloud Tinning Controls", None, show_point_clouds_tinning_control, True)
+            clicked, show_camera_control = imgui.menu_item("Show Camera Controls", None, show_camera_control, True)
+            imgui.end_menu()
+        imgui.end_main_menu_bar()
 
-    imgui.end()
+    if show_point_clouds_tinning_control:
+        opened, show_point_clouds_tinning_control = imgui.begin("Point Cloud Controls", True)
+        if opened:
+            imgui.text("Adjust point cloud settings:")
+
+            _, is_thinning_enabled = imgui.checkbox("Enable Thinning", is_thinning_enabled)
+            
+            imgui.push_item_width(150)  # 固定滑动条宽度为150像素
+            
+            changed_ds, ds = imgui.slider_float("Distance Threshold (ds)", ds, 0.1, 100.0)
+            changed_dh, dh = imgui.slider_float("Height Threshold (dh)", dh, 0.1, 100.0)
+            changed_lod, lod_level = imgui.slider_float("LOD Level", lod_level, 0.001, 1.0)
+            
+            imgui.pop_item_width()  # 恢复默认宽度
+
+            if imgui.button("Load PLY File"):
+                load_ply_callback()
+            
+            if imgui.button("Save Simplified Point Cloud"):
+                if is_thinning_enabled:
+                    simplify_callback(lod_level)
+
+        is_hovered = is_hovered or imgui.is_window_hovered()  # 更新悬停状态
+        imgui.end()
+
+    if show_camera_control:
+        # 添加相机控制窗口
+        if imgui.begin("Camera Control", True):
+            if imgui.button(label='rot 180'):
+                mouse_controller.rotation[0] += 180
+            
+            imgui.same_line()
+            # 添加恢复初始位置按钮
+            if imgui.button(label="Reset Position"):
+                mouse_controller.reset_position()
+
+            imgui.push_item_width(150)  # 固定滑动条宽度为150像素
+
+            changed, mouse_controller.zoom = imgui.slider_float(
+                    "Zoom", mouse_controller.zoom, 0.1, 5.0, "zoom = %.3f"
+                )
+            if changed:
+                mouse_controller.update_zoom()
+
+            changed, mouse_controller.rotation_sensitivity = imgui.slider_float(
+                    "Rotate Sensitivity", mouse_controller.rotation_sensitivity, 0.1, 5.0, "rotate speed = %.3f"
+                )
+            imgui.same_line()
+            if imgui.button(label="Reset Rotate Sensitivity"):
+                mouse_controller.rotation_sensitivity = 0.5
+
+            changed, mouse_controller.translation_sensitivity = imgui.slider_float(
+                    "Move Sensitivity", mouse_controller.translation_sensitivity, 0.001, 1.0, "move speed = %.3f"
+                )
+            imgui.same_line()
+            if imgui.button(label="Reset Move Sensitivity"):
+                mouse_controller.translation_sensitivity = 0.01
+
+            imgui.pop_item_width()  # 恢复默认宽度
+
+        is_hovered = is_hovered or imgui.is_window_hovered()  # 更新悬停状态
+        imgui.end()
+
     imgui.render()
 
-    return is_thinning_enabled, changed_ds, ds, changed_dh, dh, changed_lod, lod_level
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, is_hovered
 
 # 主程序
 def main():
@@ -93,7 +152,7 @@ def main():
     if not glfw.init():
         return
 
-    window = glfw.create_window(800, 600, "Point Cloud Fast Thinning (Based on Sample Point Spatial Neighborhood)", None, None)
+    window = glfw.create_window(900, 600, "Point Cloud Fast Thinning (Based on Sample Point Spatial Neighborhood)", None, None)
     glfw.make_context_current(window)
 
     imgui.create_context()
@@ -112,6 +171,8 @@ def main():
     dh = 10.0  # 初始高度阈值
     is_thinning_enabled = False  # 初始稀疏算法状态
     points, colors = np.array([]), np.array([])  # 初始化为空数组
+    show_point_clouds_tinning_control = True  # 点云滤波控制窗口显示状态
+    show_camera_control = True  # 相机控制窗口显示状态
 
     def simplify_callback(lod_level):
         nonlocal points, colors
@@ -124,7 +185,6 @@ def main():
                 save_ply(file_path, points, colors)
 
     def load_ply_callback():
-        global custom_ply_path, original_points, original_colors
         nonlocal points, colors
         root = tk.Tk()
         root.withdraw()
@@ -141,6 +201,8 @@ def main():
 
         # 获取窗口尺寸
         width, height = glfw.get_framebuffer_size(window)
+        if width == 0 or height == 0:  # 防止宽度或高度为零
+            continue
         gl.glViewport(0, 0, width, height)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
@@ -174,11 +236,11 @@ def main():
             draw_axes()
 
         # ImGui 渲染
-        is_thinning_enabled, changed_ds, ds, changed_dh, dh, changed_lod, lod_level = imgui_interface(is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback)
+        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, is_hovered = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback)
         impl.render(imgui.get_draw_data())
 
         # 更新鼠标控制状态
-        mouse_controller.update(not imgui.is_any_item_hovered())
+        mouse_controller.update(not is_hovered)
 
         glfw.swap_buffers(window)
 
