@@ -61,12 +61,24 @@ def render_point_cloud(points, colors):
     # 绘制XYZ轴
     draw_axes()
 
+# 渲染深度场景
+def render_depth_scene(points, depth_range, depth_axis):
+    gl.glBegin(gl.GL_POINTS)
+    for point in points:
+        depth = 1.0 - min(point[depth_axis] / depth_range, 1.0)  # 使用选定轴作为深度值，并根据深度范围进行归一化，限制最大值为1.0，深度值越大颜色越亮
+        gl.glColor3f(depth, depth, depth)  # 将深度值映射为灰度颜色
+        gl.glVertex3f(*point)
+    gl.glEnd()
+    
+    # 绘制XYZ轴
+    draw_axes()
+
 # ImGui 界面
-def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback):
+def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, lod_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis):
     imgui.new_frame()
 
     # 初始化变量
-    changed_ds = changed_dh = changed_lod = False
+    changed_ds = changed_dh = changed_lod = changed_point_size = changed_depth_range = changed_depth_axis = False
     is_hovered = False  # 新增变量，指示鼠标是否悬停在 ImGui 窗口上
     
     # 菜单栏
@@ -74,11 +86,12 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         if imgui.begin_menu("Window", True):
             clicked, show_point_clouds_tinning_control = imgui.menu_item("Show Point Cloud Tinning Controls", None, show_point_clouds_tinning_control, True)
             clicked, show_camera_control = imgui.menu_item("Show Camera Controls", None, show_camera_control, True)
+            clicked, show_point_size_control = imgui.menu_item("Show Point Clouds Control", None, show_point_size_control, True)
             imgui.end_menu()
         imgui.end_main_menu_bar()
 
     if show_point_clouds_tinning_control:
-        opened, show_point_clouds_tinning_control = imgui.begin("Point Cloud Controls", True)
+        opened, show_point_clouds_tinning_control = imgui.begin("Point Cloud Tinning Controls", True)
         if opened:
             imgui.text("Adjust point cloud settings:")
 
@@ -140,9 +153,29 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         is_hovered = is_hovered or imgui.is_window_hovered()  # 更新悬停状态
         imgui.end()
 
+    if show_point_size_control:
+        # 添加点云大小控制窗口
+        if imgui.begin("Point Clouds Control", True):
+            imgui.push_item_width(150)  # 固定滑动条宽度为150像素
+            changed_point_size, point_size = imgui.slider_float("Point Size", point_size, 1.0, 10.0, "size = %.1f")
+            imgui.pop_item_width()  # 恢复默认宽度
+
+            # 添加深度场景切换按钮
+            _, show_depth_scene = imgui.checkbox("Show Depth Scene", show_depth_scene)
+            
+            # 添加深度轴选择下拉列表
+            depth_axis_labels = ["X-Axis", "Y-Axis", "Z-Axis"]
+            changed_depth_axis, depth_axis = imgui.combo("Depth Axis", depth_axis, depth_axis_labels)
+            
+            # 添加深度范围滑动条
+            changed_depth_range, depth_range = imgui.slider_float("Depth Range", depth_range, 0.1, 100.0, "range = %.1f")
+
+        is_hovered = is_hovered or imgui.is_window_hovered()  # 更新悬停状态
+        imgui.end()
+
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, is_hovered
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis
 
 # 主程序
 def main():
@@ -169,10 +202,15 @@ def main():
     lod_level = 1.0  # 初始 LOD 级别
     ds = 10.0  # 初始距离阈值
     dh = 10.0  # 初始高度阈值
+    point_size = 1.0  # 初始点大小
     is_thinning_enabled = False  # 初始稀疏算法状态
     points, colors = np.array([]), np.array([])  # 初始化为空数组
     show_point_clouds_tinning_control = True  # 点云滤波控制窗口显示状态
     show_camera_control = True  # 相机控制窗口显示状态
+    show_point_size_control = True  # 点云大小控制窗口显示状态
+    show_depth_scene = False  # 初始深度场景显示状态
+    depth_range = 10.0  # 初始深度范围
+    depth_axis = 2  # 初始深度轴（Z轴）
 
     def simplify_callback(lod_level):
         nonlocal points, colors
@@ -185,6 +223,7 @@ def main():
                 save_ply(file_path, points, colors)
 
     def load_ply_callback():
+        global custom_ply_path, original_points, original_colors
         nonlocal points, colors
         root = tk.Tk()
         root.withdraw()
@@ -229,14 +268,18 @@ def main():
             points, colors = original_points, original_colors
 
         # OpenGL 渲染
-        if points.size > 0 and colors.size > 0:
-            render_point_cloud(points, colors)
+        if points.size > 0:
+            gl.glPointSize(point_size)  # 设置点大小
+            if show_depth_scene:
+                render_depth_scene(points, depth_range, depth_axis)
+            else:
+                render_point_cloud(points, colors)
         else:
             # 绘制XYZ轴
             draw_axes()
 
         # ImGui 渲染
-        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, is_hovered = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, is_thinning_enabled, ds, dh, lod_level, simplify_callback, load_ply_callback)
+        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, lod_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis)
         impl.render(imgui.get_draw_data())
 
         # 更新鼠标控制状态
