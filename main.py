@@ -1,4 +1,5 @@
 import open3d as o3d
+from plyfile import PlyData
 import numpy as np
 import imgui
 from imgui.integrations.glfw import GlfwRenderer
@@ -17,8 +18,10 @@ original_colors = None
 
 # 读取 PLY 点云数据
 def read_ply(file_path):
-    pcd = o3d.io.read_point_cloud(file_path)
-    return np.asarray(pcd.points), np.asarray(pcd.colors)
+    plydata = PlyData.read(file_path)
+    points = np.vstack([plydata['vertex']['x'], plydata['vertex']['y'], plydata['vertex']['z']]).T
+    colors = np.vstack([plydata['vertex']['red'], plydata['vertex']['green'], plydata['vertex']['blue']]).T / 255.0
+    return points, colors
 
 # 保存 PLY 点云数据
 def save_ply(file_path, points, colors):
