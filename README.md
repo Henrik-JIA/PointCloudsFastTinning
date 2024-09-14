@@ -1,4 +1,7 @@
 # PointCloudsFastTinning
+
+![image-20240914181720224](./assets/Main_Interface.png)
+
 This project implements a fast point cloud thinning algorithm based on sample point spatial neighborhood and provides a graphical user interface (GUI) to load, display, and manipulate point cloud data.
 
 ## Features
@@ -51,16 +54,24 @@ This project implements a fast point cloud thinning algorithm based on sample po
 
 ## File Descriptions
 
-- `compress_point/main.py`: The main program, containing the GUI and point cloud rendering logic.
-- `compress_point/mouse_controller.py`: The MouseController class, used to handle mouse input.
-- `compress_point/point_cloud_thinning.py`: The implementation of the point cloud thinning algorithm.
+- `main.py`: The main program, containing the GUI and point cloud rendering logic.
+- `function` folder: Contains the implementation of the point cloud thinning algorithm.
+  - `point_cloud_thinning.py`: Implementation of the point cloud thinning algorithm.
+- `interface` folder: Contains various control interfaces.
+  - `camera_control_interface.py`: Camera control interface.
+  - `point_clouds_control_interface.py`: Point clouds control interface.
+  - `point_clouds_tinning_control_interface.py`: Point clouds thinning control interface.
+  - `wave_control_interface.py`: Wave control interface.
+- `util` folder: Contains utility classes.
+  - `mouse_controller.py`: MouseController class, used to handle mouse input.
+- `imgui.ini`: ImGui configuration file.
 
 ## Example
 
 - A Point Clouds Fast Thinning Algorithm Based on Sample Point Spatial Neighborhood
   ![Point_Cloud_Tinning](./assets/Point_Cloud_Tinning-1726049378012-1.gif)
 
-## Reference **Algorithm** 
+## Reference Algorithm
 
 - Wei J, Xu M, Xiu H. A point clouds fast thinning algorithm based on sample point spatial neighborhood[J]. Journal of Information Processing Systems, 2020, 16(3): 688-698.
 
