@@ -9,7 +9,7 @@ import glfw
 import tkinter as tk
 from tkinter import filedialog
 from mouse_controller import MouseController  # 导入 MouseController 类
-from point_cloud_thinning import get_lod_point_cloud  # 导入点云稀疏算法
+from point_cloud_thinning import get_tinning_point_cloud  # 导入点云稀疏算法
 
 # 全局变量，用于存储用户选择的文件路径和点云数据
 custom_ply_path = None
@@ -19,8 +19,14 @@ original_colors = None
 # 读取 PLY 点云数据
 def read_ply(file_path):
     plydata = PlyData.read(file_path)
-    points = np.vstack([plydata['vertex']['x'], plydata['vertex']['y'], plydata['vertex']['z']]).T
-    colors = np.vstack([plydata['vertex']['red'], plydata['vertex']['green'], plydata['vertex']['blue']]).T / 255.0
+    points = np.vstack([plydata['vertex']['x'], 
+                        plydata['vertex']['y'], 
+                        plydata['vertex']['z']]).T
+    # points = points.astype(np.float64) 
+    colors = np.vstack([plydata['vertex']['red'], 
+                        plydata['vertex']['green'], 
+                        plydata['vertex']['blue']]).T / 255.0
+    # colors = colors.astype(np.float64) 
     return points, colors
 
 # 保存 PLY 点云数据
@@ -77,7 +83,7 @@ def render_depth_scene(points, depth_range, depth_axis):
     draw_axes()
 
 # ImGui 界面
-def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, lod_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis):
+def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis):
     imgui.new_frame()
 
     # 初始化变量
@@ -104,7 +110,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
             
             changed_ds, ds = imgui.slider_float("Distance Threshold (ds)", ds, 0.1, 100.0)
             changed_dh, dh = imgui.slider_float("Height Threshold (dh)", dh, 0.1, 100.0)
-            changed_lod, lod_level = imgui.slider_float("LOD Level", lod_level, 0.001, 1.0)
+            changed_lod, tinning_level = imgui.slider_float("Tinning Level", tinning_level, 0.001, 1.0)
             
             imgui.pop_item_width()  # 恢复默认宽度
 
@@ -113,7 +119,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
             
             if imgui.button("Save Simplified Point Cloud"):
                 if is_thinning_enabled:
-                    simplify_callback(lod_level)
+                    simplify_callback(tinning_level)
 
         is_hovered = is_hovered or imgui.is_window_hovered()  # 更新悬停状态
         imgui.end()
@@ -178,7 +184,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
 
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, tinning_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis
 
 # 主程序
 def main():
@@ -202,7 +208,7 @@ def main():
     glfw.set_cursor_pos_callback(window, mouse_controller.cursor_position_callback)
     glfw.set_scroll_callback(window, mouse_controller.scroll_callback)
 
-    lod_level = 1.0  # 初始 LOD 级别
+    tinning_level = 1.0  # 初始tinning级别
     ds = 10.0  # 初始距离阈值
     dh = 10.0  # 初始高度阈值
     point_size = 1.0  # 初始点大小
@@ -215,10 +221,10 @@ def main():
     depth_range = 10.0  # 初始深度范围
     depth_axis = 2  # 初始深度轴（Z轴）
 
-    def simplify_callback(lod_level):
+    def simplify_callback(tinning_level):
         nonlocal points, colors
         if original_points is not None and original_colors is not None:
-            points, colors = get_lod_point_cloud(ds, dh, lod_level, original_points, original_colors)
+            points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
             root = tk.Tk()
             root.withdraw()
             file_path = filedialog.asksaveasfilename(title="Save PLY File", defaultextension=".ply", filetypes=[("PLY files", "*.ply")])
@@ -266,7 +272,7 @@ def main():
 
         # 更新 LOD
         if is_thinning_enabled and original_points is not None and original_colors is not None:
-            points, colors = get_lod_point_cloud(ds, dh, lod_level, original_points, original_colors)
+            points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
         elif not is_thinning_enabled and original_points is not None and original_colors is not None:
             points, colors = original_points, original_colors
 
@@ -282,7 +288,7 @@ def main():
             draw_axes()
 
         # ImGui 渲染
-        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, lod_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, lod_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis)
+        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, changed_ds, ds, changed_dh, dh, changed_lod, tinning_level, changed_point_size, point_size, is_hovered, show_depth_scene, depth_range, depth_axis = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis)
         impl.render(imgui.get_draw_data())
 
         # 更新鼠标控制状态

@@ -22,7 +22,7 @@ def point_cloud_thinning(points, colors, ds, dh):
     return thinned_points, thinned_colors
 
 # 根据 LOD 级别选择点云数据
-def get_lod_point_cloud(ds, dh, lod_level, points, colors):
+def get_tinning_point_cloud(ds, dh, lod_level, points, colors):
      # ds设置距离阈值
      # dh设置高度阈值
     return point_cloud_thinning(points, colors, lod_level * ds, lod_level * dh)
