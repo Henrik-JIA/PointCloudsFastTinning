@@ -150,10 +150,12 @@ def main():
     point_size = 1.0
     is_thinning_enabled = False
     points, colors = np.array([]), np.array([])
+
     show_point_clouds_tinning_control = True
-    show_camera_control = True
-    show_point_size_control = True
-    show_wave_control = True
+    show_camera_control = False
+    show_point_size_control = False
+    show_wave_control = False
+
     show_depth_scene = False
     depth_range = 10.0
     depth_axis = 2
