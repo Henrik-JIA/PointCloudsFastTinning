@@ -246,7 +246,7 @@ def main():
         if points.size > 0:
             gl.glPointSize(point_size)
             if show_depth_scene:
-                render_depth_scene(points, depth_range, depth_axis)
+                render_depth_scene_vbo(points, depth_range, depth_axis)  # 使用VBO版本
             else:
                 render_point_cloud_vbo(points, colors)
         else:
@@ -265,6 +265,38 @@ def main():
 
     impl.shutdown()
     glfw.terminate()
+
+def render_depth_scene_vbo(points, depth_range, depth_axis):
+    # 创建VBO并绑定数据
+    vbo = gl.glGenBuffers(1)
+    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+
+    # 计算深度颜色
+    depths = 1.0 - np.clip(points[:, depth_axis] / depth_range, 0, 1)
+    colors = np.stack((depths, depths, depths), axis=-1)
+
+    # 将点和颜色数据合并
+    data = np.hstack((points, colors)).astype(np.float32)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_STATIC_DRAW)
+
+    # 启用顶点属性
+    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glVertexPointer(3, gl.GL_FLOAT, 6 * data.itemsize, None)
+    gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+    gl.glColorPointer(3, gl.GL_FLOAT, 6 * data.itemsize, ctypes.c_void_p(3 * data.itemsize))
+
+    # 绘制点云
+    gl.glDrawArrays(gl.GL_POINTS, 0, len(points))
+
+    # 禁用顶点属性
+    gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+
+    # 删除VBO
+    gl.glDeleteBuffers(1, [vbo])
+
+    # 绘制XYZ轴
+    draw_axes()
 
 if __name__ == "__main__":
     main()

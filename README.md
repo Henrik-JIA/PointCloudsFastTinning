@@ -1,6 +1,6 @@
 # PointCloudsFastTinning
 
-![image-20240914181720224](./assets/Main_Interface.png)
+![image-20241014165350407](./assets/Main_Interface_PointCloudsFastTinning.png)
 
 This project implements a fast point cloud thinning algorithm based on sample point spatial neighborhood and provides a graphical user interface (GUI) to load, display, and manipulate point cloud data.
 
@@ -69,7 +69,15 @@ This project implements a fast point cloud thinning algorithm based on sample po
 ## Example
 
 - A Point Clouds Fast Thinning Algorithm Based on Sample Point Spatial Neighborhood
-  ![Point_Cloud_Tinning](./assets/Point_Cloud_Tinning-1726049378012-1.gif)
+  ![Point_Cloud_Tinning](./assets/Point_Clouds_Tinning.gif)
+  
+- Show depth
+
+  ![image-20241014164918206](./assets/Point_Clouds_Depth.png)
+
+- Show point clouds wave
+
+  ![Point_Cloud_Waving](./assets/Point_Clouds_Waving.gif)
 
 ## Reference Algorithm
 
