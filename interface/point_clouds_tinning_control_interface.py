@@ -1,8 +1,11 @@
 import imgui
 
-def point_clouds_tinning_control_interface(is_thinning_enabled, ds, dh, tinning_level, simplify_callback, load_ply_callback):
+def point_clouds_tinning_control_interface(is_thinning_enabled, ds, dh, tinning_level, simplify_callback, load_ply_callback, fps):
     is_hovered = False
     if imgui.begin("Point Cloud Tinning Controls", True):
+        # 显示FPS
+        imgui.text(f"FPS: {fps:.1f}")
+
         imgui.text("Adjust point cloud settings:")
 
         _, is_thinning_enabled = imgui.checkbox("Enable Thinning", is_thinning_enabled)

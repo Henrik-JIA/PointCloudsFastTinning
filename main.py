@@ -15,6 +15,7 @@ from interface.point_clouds_tinning_control_interface import point_clouds_tinnin
 from interface.point_clouds_control_interface import point_clouds_control_interface
 from interface.wave_control_interface import wave_control_interface
 import ctypes
+import time
 
 # 全局变量，用于存储用户选择的文件路径和点云数据
 custom_ply_path = None
@@ -105,7 +106,7 @@ def apply_wave_effect(points, amplitude, frequency, phase, axis):
     return points
 
 # ImGui 界面
-def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed):
+def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, fps):
     imgui.new_frame()
 
     is_hovered = False
@@ -120,7 +121,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         imgui.end_main_menu_bar()
 
     if show_point_clouds_tinning_control:
-        is_thinning_enabled, ds, dh, tinning_level, hovered = point_clouds_tinning_control_interface(is_thinning_enabled, ds, dh, tinning_level, simplify_callback, load_ply_callback)
+        is_thinning_enabled, ds, dh, tinning_level, hovered = point_clouds_tinning_control_interface(is_thinning_enabled, ds, dh, tinning_level, simplify_callback, load_ply_callback, fps)
         is_hovered = is_hovered or hovered
 
     if show_camera_control:
@@ -201,7 +202,15 @@ def main():
             original_points, original_colors = read_ply(file_path)
             points, colors = original_points, original_colors
 
+    last_time = time.time()
+    fps = 0
+
     while not glfw.window_should_close(window):
+        current_time = time.time()
+        delta_time = current_time - last_time
+        last_time = current_time
+        fps = 1.0 / delta_time if delta_time > 0 else 0
+
         glfw.poll_events()
         impl.process_inputs()
 
@@ -243,7 +252,11 @@ def main():
         else:
             draw_axes()
 
-        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed = imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed)
+        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed = imgui_interface(
+            mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
+            show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
+            load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
+            wave_axis, is_wave_enabled, wave_speed, fps)  # 传递fps
         impl.render(imgui.get_draw_data())
 
         mouse_controller.update(not is_hovered)
