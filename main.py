@@ -14,6 +14,7 @@ from interface.camera_control_interface import camera_control_interface
 from interface.point_clouds_tinning_control_interface import point_clouds_tinning_control_interface
 from interface.point_clouds_control_interface import point_clouds_control_interface
 from interface.wave_control_interface import wave_control_interface
+import ctypes
 
 # 全局变量，用于存储用户选择的文件路径和点云数据
 custom_ply_path = None
@@ -62,15 +63,28 @@ def draw_axes(length=0.3, line_width=2.0):
     gl.glLineWidth(1.0)
 
 # 渲染点云
-def render_point_cloud(points, colors):
-    gl.glBegin(gl.GL_POINTS)
-    for point, color in zip(points, colors):
-        gl.glColor3f(*color)
-        gl.glVertex3f(*point)
-    gl.glEnd()
-    
-    # 绘制XYZ轴
-    draw_axes()
+def render_point_cloud_vbo(points, colors):
+    # 创建VBO并绑定数据
+    vbo = gl.glGenBuffers(1)
+    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+    data = np.hstack((points, colors)).astype(np.float32)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_STATIC_DRAW)
+
+    # 启用顶点属性
+    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glVertexPointer(3, gl.GL_FLOAT, 6 * data.itemsize, None)
+    gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+    gl.glColorPointer(3, gl.GL_FLOAT, 6 * data.itemsize, ctypes.c_void_p(3 * data.itemsize))
+
+    # 绘制点云
+    gl.glDrawArrays(gl.GL_POINTS, 0, len(points))
+
+    # 禁用顶点属性
+    gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+
+    # 删除VBO
+    gl.glDeleteBuffers(1, [vbo])
 
 # 渲染深度场景
 def render_depth_scene(points, depth_range, depth_axis):
@@ -225,7 +239,7 @@ def main():
             if show_depth_scene:
                 render_depth_scene(points, depth_range, depth_axis)
             else:
-                render_point_cloud(points, colors)
+                render_point_cloud_vbo(points, colors)
         else:
             draw_axes()
 
