@@ -10,10 +10,12 @@ import tkinter as tk
 from tkinter import filedialog
 from util.mouse_controller import MouseController
 from function.point_cloud_thinning import get_tinning_point_cloud
+from function.get_lod_point_cloud import get_lod_point_cloud
 from interface.camera_control_interface import camera_control_interface
 from interface.point_clouds_tinning_control_interface import point_clouds_tinning_control_interface
 from interface.point_clouds_control_interface import point_clouds_control_interface
 from interface.wave_control_interface import wave_control_interface
+from interface.lod_control_interface import point_cloud_lod_control_interface
 import ctypes
 import time
 
@@ -99,6 +101,38 @@ def render_depth_scene(points, depth_range, depth_axis):
     # 绘制XYZ轴
     draw_axes()
 
+def render_depth_scene_vbo(points, depth_range, depth_axis):
+    # 创建VBO并绑定数据
+    vbo = gl.glGenBuffers(1)
+    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
+
+    # 计算深度颜色
+    depths = 1.0 - np.clip(points[:, depth_axis] / depth_range, 0, 1)
+    colors = np.stack((depths, depths, depths), axis=-1)
+
+    # 将点和颜色数据合并
+    data = np.hstack((points, colors)).astype(np.float32)
+    gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_STATIC_DRAW)
+
+    # 启用顶点属性
+    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glVertexPointer(3, gl.GL_FLOAT, 6 * data.itemsize, None)
+    gl.glEnableClientState(gl.GL_COLOR_ARRAY)
+    gl.glColorPointer(3, gl.GL_FLOAT, 6 * data.itemsize, ctypes.c_void_p(3 * data.itemsize))
+
+    # 绘制点云
+    gl.glDrawArrays(gl.GL_POINTS, 0, len(points))
+
+    # 禁用顶点属性
+    gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glDisableClientState(gl.GL_COLOR_ARRAY)
+
+    # 删除VBO
+    gl.glDeleteBuffers(1, [vbo])
+
+    # 绘制XYZ轴
+    draw_axes()
+
 # 新增函数：生成波动效果
 def apply_wave_effect(points, amplitude, frequency, phase, axis):
     points = points.copy()
@@ -106,7 +140,7 @@ def apply_wave_effect(points, amplitude, frequency, phase, axis):
     return points
 
 # ImGui 界面
-def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, fps):
+def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps):
     imgui.new_frame()
 
     is_hovered = False
@@ -117,6 +151,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
             clicked, show_camera_control = imgui.menu_item("Show Camera Controls", None, show_camera_control, True)
             clicked, show_point_size_control = imgui.menu_item("Show Point Clouds Control", None, show_point_size_control, True)
             clicked, show_wave_control = imgui.menu_item("Show Wave Controls", None, show_wave_control, True)
+            clicked, show_lod_control = imgui.menu_item("Show LOD Controls", None, show_lod_control, True)
             imgui.end_menu()
         imgui.end_main_menu_bar()
 
@@ -136,9 +171,13 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         is_wave_enabled, wave_amplitude, wave_frequency, wave_speed, wave_axis, hovered = wave_control_interface(is_wave_enabled, wave_amplitude, wave_frequency, wave_speed, wave_axis)
         is_hovered = is_hovered or hovered
 
+    if show_lod_control:
+        lod_level, is_lod_enabled, hovered = point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, update_lod_callback)
+        is_hovered = is_hovered or hovered
+
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled
 
 # 主程序
 def main():
@@ -170,6 +209,7 @@ def main():
     show_camera_control = False
     show_point_size_control = False
     show_wave_control = False
+    show_lod_control = False
 
     show_depth_scene = False
     depth_range = 10.0
@@ -180,6 +220,10 @@ def main():
     is_wave_enabled = False
     wave_speed = 0.1
     wave_phase = 0.0
+
+    lod_level = 0
+    max_lod_level = 10
+    is_lod_enabled = False
 
     def simplify_callback(tinning_level):
         nonlocal points, colors
@@ -201,6 +245,20 @@ def main():
             custom_ply_path = file_path
             original_points, original_colors = read_ply(file_path)
             points, colors = original_points, original_colors
+
+    def update_lod_callback(new_lod_level, lod_enabled):
+        nonlocal lod_level, is_lod_enabled
+        lod_level = new_lod_level
+        is_lod_enabled = lod_enabled
+        # 在这里添加更新点云渲染的逻辑
+        if is_lod_enabled and original_points is not None and original_colors is not None:
+            # 函数 get_lod_point_cloud 来获取 LOD 级别的点云
+            points, colors = get_lod_point_cloud(lod_level, original_points, original_colors)
+            print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")  # 打印点的数量
+        else:
+            points, colors = original_points, original_colors
+            print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")  # 打印点的数量
+
 
     last_time = time.time()
     fps = 0
@@ -234,29 +292,51 @@ def main():
         gl.glRotatef(mouse_controller.rotation[0], 1, 0, 0)
         gl.glRotatef(-mouse_controller.rotation[1], 0, 1, 0)
 
-        if is_thinning_enabled and original_points is not None and original_colors is not None:
+        # # 更新点云数据
+        # if is_thinning_enabled and original_points is not None and original_colors is not None:
+        #     points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
+        # elif not is_thinning_enabled and original_points is not None and original_colors is not None:
+        #     points, colors = original_points, original_colors
+        # 更新点云数据
+        if is_lod_enabled and original_points is not None and original_colors is not None:
+            points, colors = get_lod_point_cloud(lod_level, original_points, original_colors)
+            if is_thinning_enabled:
+                points, colors = get_tinning_point_cloud(ds, dh, tinning_level, points, colors)
+        elif is_thinning_enabled and original_points is not None and original_colors is not None:
             points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
-        elif not is_thinning_enabled and original_points is not None and original_colors is not None:
+        elif original_points is not None and original_colors is not None:
             points, colors = original_points, original_colors
 
         if is_wave_enabled and points.size > 0:
             wave_phase = (wave_phase + wave_speed) % (2 * np.pi)
             points = apply_wave_effect(points, wave_amplitude, wave_frequency, wave_phase, wave_axis)
 
-        if points.size > 0:
-            gl.glPointSize(point_size)
-            if show_depth_scene:
-                render_depth_scene_vbo(points, depth_range, depth_axis)  # 使用VBO版本
-            else:
+        # 根据 LOD 启用状态选择渲染方式
+        if is_lod_enabled:
+            # 使用 LOD 渲染逻辑
+            # 这里可以根据 lod_level 调整渲染的细节
+            if points.size > 0:
+                print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")  # 打印点的数量
+                gl.glPointSize(point_size)
                 render_point_cloud_vbo(points, colors)
         else:
-            draw_axes()
+            # 使用默认渲染逻辑
+            if points.size > 0:
+                print(f"Default Render, Points Size: {points.shape[0]}")  # 打印点的数量
+                gl.glPointSize(point_size)
+                if show_depth_scene:
+                    render_depth_scene_vbo(points, depth_range, depth_axis)  # 使用VBO版本
+                else:
+                    render_point_cloud_vbo(points, colors)
+            else:
+                draw_axes()
 
-        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed = imgui_interface(
+        is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled = imgui_interface(
             mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
-            show_wave_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
+            show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
             load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
-            wave_axis, is_wave_enabled, wave_speed, fps)  # 传递fps
+            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps)  # 传递fps
+
         impl.render(imgui.get_draw_data())
 
         mouse_controller.update(not is_hovered)
@@ -266,37 +346,7 @@ def main():
     impl.shutdown()
     glfw.terminate()
 
-def render_depth_scene_vbo(points, depth_range, depth_axis):
-    # 创建VBO并绑定数据
-    vbo = gl.glGenBuffers(1)
-    gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vbo)
 
-    # 计算深度颜色
-    depths = 1.0 - np.clip(points[:, depth_axis] / depth_range, 0, 1)
-    colors = np.stack((depths, depths, depths), axis=-1)
-
-    # 将点和颜色数据合并
-    data = np.hstack((points, colors)).astype(np.float32)
-    gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_STATIC_DRAW)
-
-    # 启用顶点属性
-    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-    gl.glVertexPointer(3, gl.GL_FLOAT, 6 * data.itemsize, None)
-    gl.glEnableClientState(gl.GL_COLOR_ARRAY)
-    gl.glColorPointer(3, gl.GL_FLOAT, 6 * data.itemsize, ctypes.c_void_p(3 * data.itemsize))
-
-    # 绘制点云
-    gl.glDrawArrays(gl.GL_POINTS, 0, len(points))
-
-    # 禁用顶点属性
-    gl.glDisableClientState(gl.GL_VERTEX_ARRAY)
-    gl.glDisableClientState(gl.GL_COLOR_ARRAY)
-
-    # 删除VBO
-    gl.glDeleteBuffers(1, [vbo])
-
-    # 绘制XYZ轴
-    draw_axes()
 
 if __name__ == "__main__":
     main()
