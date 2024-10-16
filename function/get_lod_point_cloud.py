@@ -12,6 +12,9 @@ def get_lod_point_cloud(lod_level, original_points, original_colors):
     if lod_level <= 0:
         return original_points, original_colors
 
+    # 使用固定的随机种子
+    np.random.seed(42)  # 固定种子以确保一致性
+    
     # 计算采样率，假设 lod_level 越高，采样率越低
     sample_rate = max(0.1, 1.0 - lod_level * 0.1)
     num_points = int(len(original_points) * sample_rate)

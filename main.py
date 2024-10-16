@@ -292,19 +292,22 @@ def main():
         gl.glRotatef(mouse_controller.rotation[0], 1, 0, 0)
         gl.glRotatef(-mouse_controller.rotation[1], 0, 1, 0)
 
-        # # 更新点云数据
-        # if is_thinning_enabled and original_points is not None and original_colors is not None:
-        #     points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
-        # elif not is_thinning_enabled and original_points is not None and original_colors is not None:
-        #     points, colors = original_points, original_colors
         # 更新点云数据
+        # 如果启用了 LOD 并且原始点云数据存在
         if is_lod_enabled and original_points is not None and original_colors is not None:
+            # 获取指定 LOD 级别的点云数据
             points, colors = get_lod_point_cloud(lod_level, original_points, original_colors)
+            # 如果同时启用了点云稀疏化
             if is_thinning_enabled:
+                # 对 LOD 处理后的点云数据进行稀疏化处理
                 points, colors = get_tinning_point_cloud(ds, dh, tinning_level, points, colors)
+        # 如果仅启用了点云稀疏化并且原始点云数据存在
         elif is_thinning_enabled and original_points is not None and original_colors is not None:
+            # 对原始点云数据进行稀疏化处理
             points, colors = get_tinning_point_cloud(ds, dh, tinning_level, original_points, original_colors)
+        # 如果没有启用 LOD 和稀疏化，但原始点云数据存在
         elif original_points is not None and original_colors is not None:
+            # 使用原始点云数据
             points, colors = original_points, original_colors
 
         if is_wave_enabled and points.size > 0:
@@ -318,11 +321,13 @@ def main():
             if points.size > 0:
                 print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")  # 打印点的数量
                 gl.glPointSize(point_size)
-                render_point_cloud_vbo(points, colors)
+                if show_depth_scene:
+                    render_depth_scene_vbo(points, depth_range, depth_axis)  # 优先进行深度渲染
+                else:
+                    render_point_cloud_vbo(points, colors)
         else:
             # 使用默认渲染逻辑
             if points.size > 0:
-                print(f"Default Render, Points Size: {points.shape[0]}")  # 打印点的数量
                 gl.glPointSize(point_size)
                 if show_depth_scene:
                     render_depth_scene_vbo(points, depth_range, depth_axis)  # 使用VBO版本
