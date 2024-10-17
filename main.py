@@ -143,7 +143,7 @@ def apply_wave_effect(points, amplitude, frequency, phase, axis):
 def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, \
                     show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, \
                         load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, \
-                            is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps, is_auto_lod):
+                            is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps):
     imgui.new_frame()
 
     is_hovered = False
@@ -175,14 +175,14 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         is_hovered = is_hovered or hovered
 
     if show_lod_control:
-        lod_level, is_lod_enabled, is_auto_lod, hovered = point_cloud_lod_control_interface(
-            lod_level, max_lod_level, is_lod_enabled, is_auto_lod, update_lod_callback
+        lod_level, is_lod_enabled, hovered = point_cloud_lod_control_interface(
+            lod_level, max_lod_level, is_lod_enabled, update_lod_callback
         )
         is_hovered = is_hovered or hovered
 
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_auto_lod
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled
 
 # 主程序
 def main():
@@ -229,7 +229,6 @@ def main():
     lod_level = 0
     max_lod_level = 10
     is_lod_enabled = False
-    is_auto_lod = False
 
     def simplify_callback(tinning_level):
         nonlocal points, colors
@@ -258,20 +257,7 @@ def main():
         is_lod_enabled = lod_enabled
         # 在这里添加更新点云渲染的逻辑
         if is_lod_enabled and original_points is not None and original_colors is not None:
-            if is_auto_lod:
-                # 自动调整 LOD 级别的逻辑
-                camera_position = (mouse_controller.translation[0], mouse_controller.translation[1], 5 / mouse_controller.zoom)
-                lod_levels = auto_lod_level(camera_position, original_points, max_lod_level, block_size=10)
-                # 根据每个块的LOD级别处理点云
-                points, colors = [], []
-                for i, lod in enumerate(lod_levels):
-                    block_points, block_colors = get_lod_point_cloud(lod, original_points[i:i+10], original_colors[i:i+10])
-                    points.append(block_points)
-                    colors.append(block_colors)
-                points = np.vstack(points)
-                colors = np.vstack(colors)
-            else:
-                points, colors = get_lod_point_cloud(lod_level, original_points, original_colors)
+            points, colors = get_lod_point_cloud(lod_level, original_points, original_colors)
             # print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")
         else:
             points, colors = original_points, original_colors
@@ -356,11 +342,11 @@ def main():
         is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control,\
         show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene,\
         depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level,\
-        is_lod_enabled, is_auto_lod = imgui_interface(
+        is_lod_enabled = imgui_interface(
             mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
             show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
             load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
-            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps, is_auto_lod)  # 传递fps
+            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps)  # 传递fps
 
         impl.render(imgui.get_draw_data())
 
