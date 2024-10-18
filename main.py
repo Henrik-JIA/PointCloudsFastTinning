@@ -142,8 +142,8 @@ def apply_wave_effect(points, amplitude, frequency, phase, axis):
 # ImGui 界面
 def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, \
                     show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, \
-                        load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, \
-                            is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps):
+                    load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, \
+                    is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, fps, export_lod_callback):
     imgui.new_frame()
 
     is_hovered = False
@@ -175,14 +175,14 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         is_hovered = is_hovered or hovered
 
     if show_lod_control:
-        lod_level, is_lod_enabled, hovered = point_cloud_lod_control_interface(
-            lod_level, max_lod_level, is_lod_enabled, update_lod_callback
+        lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, hovered = point_cloud_lod_control_interface(
+            lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, export_lod_callback
         )
         is_hovered = is_hovered or hovered
 
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory
 
 # 主程序
 def main():
@@ -229,6 +229,8 @@ def main():
     lod_level = 0
     max_lod_level = 10
     is_lod_enabled = False
+    is_export_lod_structure = False
+    export_lod_directory = ""
 
     def simplify_callback(tinning_level):
         nonlocal points, colors
@@ -262,6 +264,14 @@ def main():
         else:
             points, colors = original_points, original_colors
             # print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")
+
+    def export_lod_callback(export_directory, lod_level):
+        if original_points is not None and original_colors is not None:
+            for level in range(lod_level + 1):
+                points, colors = get_lod_point_cloud(level, original_points, original_colors)
+                file_path = os.path.join(export_directory, f"lod_level_{level}.ply")
+                save_ply(file_path, points, colors)
+                print(f"Exported LOD level {level} to {file_path}")
 
     last_time = time.time()
     fps = 0
@@ -342,11 +352,12 @@ def main():
         is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control,\
         show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene,\
         depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level,\
-        is_lod_enabled = imgui_interface(
+        is_lod_enabled, is_export_lod_structure, export_lod_directory = imgui_interface(
             mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
             show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
             load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
-            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, update_lod_callback, fps)  # 传递fps
+            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, fps, export_lod_callback
+        )
 
         impl.render(imgui.get_draw_data())
 
