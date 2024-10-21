@@ -1,4 +1,7 @@
 import numpy as np
+import os
+
+from util.point_cloud_file_utils import save_ply
 
 def get_lod_point_cloud(lod_level, original_points, original_colors):
     """
@@ -59,3 +62,21 @@ def auto_lod_level(camera_position, points, max_lod_level, block_size=10):
         lod_levels[i:i + block_size] = lod_level
 
     return lod_levels
+
+def export_lod_point_clouds(export_directory, max_lod_level, original_points, original_colors):
+    """
+    导出每个LOD级别的点云数据到指定目录。
+
+    :param export_directory: 导出目录。
+    :param max_lod_level: 最大LOD级别。
+    :param original_points: 原始点云的点数据。
+    :param original_colors: 原始点云的颜色数据。
+    """
+    if not os.path.exists(export_directory):
+        os.makedirs(export_directory)
+
+    for level in range(max_lod_level + 1):
+        points, colors = get_lod_point_cloud(level, original_points, original_colors)
+        file_path = os.path.join(export_directory, f"lod_level_{level}.ply")
+        save_ply(file_path, points, colors)
+        print(f"Exported LOD level {level} to {file_path}")

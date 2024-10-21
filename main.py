@@ -9,8 +9,9 @@ import glfw
 import tkinter as tk
 from tkinter import filedialog
 from util.mouse_controller import MouseController
+from util.point_cloud_file_utils import read_ply, save_ply
 from function.point_cloud_thinning import get_tinning_point_cloud
-from function.get_lod_point_cloud import get_lod_point_cloud, auto_lod_level
+from function.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds
 from interface.camera_control_interface import camera_control_interface
 from interface.point_clouds_tinning_control_interface import point_clouds_tinning_control_interface
 from interface.point_clouds_control_interface import point_clouds_control_interface
@@ -23,24 +24,6 @@ import time
 custom_ply_path = None
 original_points = None
 original_colors = None
-
-# 读取 PLY 点云数据
-def read_ply(file_path):
-    plydata = PlyData.read(file_path)
-    points = np.vstack([plydata['vertex']['x'], 
-                        plydata['vertex']['y'], 
-                        plydata['vertex']['z']]).T
-    colors = np.vstack([plydata['vertex']['red'], 
-                        plydata['vertex']['green'], 
-                        plydata['vertex']['blue']]).T / 255.0
-    return points, colors
-
-# 保存 PLY 点云数据
-def save_ply(file_path, points, colors):
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    pcd.colors = o3d.utility.Vector3dVector(colors)
-    o3d.io.write_point_cloud(file_path, pcd)
 
 # 绘制XYZ轴
 def draw_axes(length=0.3, line_width=2.0):
@@ -267,11 +250,7 @@ def main():
 
     def export_lod_callback(export_directory, lod_level):
         if original_points is not None and original_colors is not None:
-            for level in range(lod_level + 1):
-                points, colors = get_lod_point_cloud(level, original_points, original_colors)
-                file_path = os.path.join(export_directory, f"lod_level_{level}.ply")
-                save_ply(file_path, points, colors)
-                print(f"Exported LOD level {level} to {file_path}")
+            export_lod_point_clouds(export_directory, lod_level, original_points, original_colors)
 
     last_time = time.time()
     fps = 0

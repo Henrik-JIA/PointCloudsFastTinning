@@ -24,7 +24,9 @@ def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, 
 
         # Export LOD Structure Checkbox
         changed, is_export_lod_structure = imgui.checkbox("Export LOD Structure", is_export_lod_structure)
-        if is_export_lod_structure:
+        if not is_export_lod_structure:
+            export_lod_directory = ""  # 清空文本框内容
+        else:
             # Directory selection
             if imgui.button("Browse"):
                 root = tk.Tk()
@@ -35,7 +37,9 @@ def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, 
                 root.destroy()
 
             imgui.same_line()
-            imgui.text(export_lod_directory)
+            # 使用输入框显示和编辑导出目录
+            buffer_size = 256
+            export_lod_directory = imgui.input_text("##export_directory", export_lod_directory, buffer_size)[1]
 
             # Export button
             if imgui.button("Export"):
