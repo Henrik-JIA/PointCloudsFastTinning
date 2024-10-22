@@ -11,7 +11,7 @@ from tkinter import filedialog
 from util.mouse_controller import MouseController
 from util.point_cloud_file_utils import read_ply, save_ply
 from function.point_cloud_thinning import get_tinning_point_cloud
-from function.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds
+from function.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds, export_3dtiles
 from interface.imgui_main_interface import imgui_interface
 from interface.camera_control_interface import camera_control_interface
 from interface.point_clouds_tinning_control_interface import point_clouds_tinning_control_interface
@@ -169,6 +169,7 @@ def main():
     max_lod_level = 10
     is_lod_enabled = False
     is_export_lod_structure = False
+    export_format = 0
     export_lod_directory = ""
 
     def simplify_callback(tinning_level):
@@ -204,9 +205,12 @@ def main():
             points, colors = original_points, original_colors
             # print(f"LOD Level: {lod_level}, Points Size: {points.shape[0]}")
 
-    def export_lod_callback(export_directory, lod_level):
+    def export_lod_callback(export_directory, lod_level, export_format):
         if original_points is not None and original_colors is not None:
-            export_lod_point_clouds(export_directory, lod_level, original_points, original_colors)
+            if export_format == 0:  # Current LOD
+                export_lod_point_clouds(export_directory, lod_level, original_points, original_colors)
+            elif export_format == 1:  # 3D Tiles
+                export_3dtiles(export_directory, lod_level, original_points, original_colors)
 
     last_time = time.time()
     fps = 0
@@ -287,11 +291,11 @@ def main():
         is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control,\
         show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene,\
         depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level,\
-        is_lod_enabled, is_export_lod_structure, export_lod_directory = imgui_interface(
+        is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format = imgui_interface(
             mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
             show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
             load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
-            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, fps, export_lod_callback
+            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback
         )
 
         impl.render(imgui.get_draw_data())

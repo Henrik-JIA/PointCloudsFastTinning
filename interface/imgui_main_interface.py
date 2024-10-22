@@ -9,7 +9,7 @@ from interface.lod_control_interface import point_cloud_lod_control_interface
 def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, \
                     show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, \
                     load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, \
-                    is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, fps, export_lod_callback):
+                    is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback):
     imgui.new_frame()
 
     is_hovered = False
@@ -41,11 +41,11 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         is_hovered = is_hovered or hovered
 
     if show_lod_control:
-        lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, hovered = point_cloud_lod_control_interface(
-            lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, export_lod_callback
+        lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, hovered = point_cloud_lod_control_interface(
+            lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, export_lod_callback
         )
         is_hovered = is_hovered or hovered
 
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format

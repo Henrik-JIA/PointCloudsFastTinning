@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
-def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, update_lod_callback, export_lod_callback):
+def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, export_lod_callback):
     is_hovered = False
 
     if imgui.begin("Point Cloud LOD Control", True):
@@ -27,6 +27,9 @@ def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, 
         if not is_export_lod_structure:
             export_lod_directory = ""  # 清空文本框内容
         else:
+            # Export format selection
+            changed, export_format = imgui.combo("Export Format", export_format, ["Current LOD", "3D Tiles"])
+
             # Directory selection
             if imgui.button("Browse"):
                 root = tk.Tk()
@@ -44,10 +47,10 @@ def point_cloud_lod_control_interface(lod_level, max_lod_level, is_lod_enabled, 
             # Export button
             if imgui.button("Export"):
                 if export_lod_directory:
-                    export_lod_callback(export_lod_directory, lod_level)
+                    export_lod_callback(export_lod_directory, lod_level, export_format)
                 else:
                     imgui.text("Please select a directory first.")
 
         is_hovered = imgui.is_window_hovered()
         imgui.end()
-    return lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, is_hovered
+    return lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, is_hovered

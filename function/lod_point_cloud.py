@@ -80,3 +80,16 @@ def export_lod_point_clouds(export_directory, max_lod_level, original_points, or
         file_path = os.path.join(export_directory, f"lod_level_{level}.ply")
         save_ply(file_path, points, colors)
         print(f"Exported LOD level {level} to {file_path}")
+
+def export_3dtiles(export_directory, lod_level, original_points, original_colors):
+    """
+    导出点云数据为3D Tiles格式。
+
+    :param export_directory: 导出目录。
+    :param lod_level: LOD级别。
+    :param original_points: 原始点云的点数据。
+    :param original_colors: 原始点云的颜色数据。
+    """
+    # 这里实现3D Tiles的导出逻辑
+    # 例如，使用Cesium的3D Tiles工具库进行转换
+    print(f"Exporting 3D Tiles for LOD level {lod_level} to {export_directory}")
