@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+verify_ssl = true
+name = "pip_conf_index_global"
+
+[packages]
+glfw = "==2.6.5"
+imgui = "==2.0.0"
+numpy = "==1.23.3"
+open3d = "==0.17.0"
+pandas = "==1.4.4"
+plyfile = "==1.1"
+pyopengl = "==3.1.7"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
