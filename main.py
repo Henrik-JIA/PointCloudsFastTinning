@@ -13,11 +13,7 @@ from util.point_cloud_file_utils import read_ply, save_ply
 from function.point_cloud_thinning import get_tinning_point_cloud
 from function.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds, export_3dtiles
 from interface.imgui_main_interface import imgui_interface
-from interface.camera_control_interface import camera_control_interface
-from interface.point_clouds_tinning_control_interface import point_clouds_tinning_control_interface
-from interface.point_clouds_control_interface import point_clouds_control_interface
-from interface.wave_control_interface import wave_control_interface
-from interface.lod_control_interface import point_cloud_lod_control_interface
+
 import ctypes
 import time
 
@@ -154,6 +150,7 @@ def main():
     show_point_size_control = False
     show_wave_control = False
     show_lod_control = False
+    show_scene_environment_control = False
 
     show_depth_scene = False
     depth_range = 10.0
@@ -171,6 +168,8 @@ def main():
     is_export_lod_structure = False
     export_format = 0
     export_lod_directory = ""
+
+    background_color = [0.0, 0.0, 0.0]  # 初始化背景颜色
 
     def simplify_callback(tinning_level):
         nonlocal points, colors
@@ -228,6 +227,7 @@ def main():
         if width == 0 or height == 0:
             continue
         gl.glViewport(0, 0, width, height)
+        gl.glClearColor(*background_color, 1.0)  # 设置背景颜色
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
         io = imgui.get_io()
@@ -289,13 +289,13 @@ def main():
                 draw_axes()
 
         is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control,\
-        show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene,\
-        depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level,\
-        is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format = imgui_interface(
+        show_wave_control, show_lod_control, show_scene_environment_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene,\
+        depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed,\
+        lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, background_color = imgui_interface(
             mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, 
-            show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
-            load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, 
-            wave_axis, is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback
+            show_wave_control, show_lod_control, show_scene_environment_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, 
+            load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed,
+            lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback, background_color
         )
 
         impl.render(imgui.get_draw_data())

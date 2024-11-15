@@ -4,12 +4,13 @@ from interface.point_clouds_tinning_control_interface import point_clouds_tinnin
 from interface.point_clouds_control_interface import point_clouds_control_interface
 from interface.wave_control_interface import wave_control_interface
 from interface.lod_control_interface import point_cloud_lod_control_interface
+from interface.scene_environment_control_interface import scene_environment_control_interface  # 新增导入
 
 # ImGui 界面
 def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, \
-                    show_wave_control, show_lod_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, \
-                    load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, \
-                    is_wave_enabled, wave_speed, lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback):
+                    show_wave_control, show_lod_control, show_scene_environment_control, is_thinning_enabled, ds, dh, tinning_level, point_size, simplify_callback, \
+                    load_ply_callback, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, \
+                    lod_level, max_lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, update_lod_callback, fps, export_lod_callback, background_color):
     imgui.new_frame()
 
     is_hovered = False
@@ -21,6 +22,7 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
             clicked, show_point_size_control = imgui.menu_item("Show Point Clouds Control", None, show_point_size_control, True)
             clicked, show_wave_control = imgui.menu_item("Show Wave Controls", None, show_wave_control, True)
             clicked, show_lod_control = imgui.menu_item("Show LOD Controls", None, show_lod_control, True)
+            clicked, show_scene_environment_control = imgui.menu_item("Show Background Control", None, show_scene_environment_control, True)  
             imgui.end_menu()
         imgui.end_main_menu_bar()
 
@@ -46,6 +48,10 @@ def imgui_interface(mouse_controller, show_point_clouds_tinning_control, show_ca
         )
         is_hovered = is_hovered or hovered
 
+    if show_scene_environment_control:  # 新增条件
+        background_color, hovered = scene_environment_control_interface(background_color)
+        is_hovered = is_hovered or hovered
+
     imgui.render()
 
-    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format
+    return is_thinning_enabled, show_point_clouds_tinning_control, show_camera_control, show_point_size_control, show_wave_control, show_lod_control, show_scene_environment_control, ds, dh, tinning_level, point_size, is_hovered, show_depth_scene, depth_range, depth_axis, wave_amplitude, wave_frequency, wave_axis, is_wave_enabled, wave_speed, lod_level, is_lod_enabled, is_export_lod_structure, export_lod_directory, export_format, background_color
