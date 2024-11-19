@@ -10,8 +10,8 @@ import tkinter as tk
 from tkinter import filedialog
 from util.mouse_controller import MouseController
 from util.point_cloud_file_utils import read_ply, save_ply
-from function.point_cloud_thinning import get_tinning_point_cloud
-from function.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds, export_3dtiles
+from tools.tinning.point_cloud_thinning import get_tinning_point_cloud
+from tools.level_of_detail.lod_point_cloud import get_lod_point_cloud, export_lod_point_clouds, export_3dtiles
 from interface.imgui_main_interface import imgui_interface
 
 import ctypes
